@@ -3,6 +3,8 @@ from random import choice
 import tkinter as tk
 import math
 import time
+import sys
+import os
 
 # Global params
 WIDTH = 800
@@ -14,7 +16,7 @@ def main():
     Executes the application
     """
     global root, canvas
-    global bullet, target, text_screen, gun, number_of_shots, bullets
+    global bullet, target, target2, text_screen, gun, number_of_shots, bullets
 
     root = tk.Tk()
     root.geometry(str(WIDTH) + 'x' + str(HEIGHT))
@@ -22,10 +24,14 @@ def main():
     canvas.pack(fill=tk.BOTH, expand=1)
 
     target = Target()
+    target2 = Target()
     text_screen = canvas.create_text(400, 20, text='', font='Times 20')
     gun = Gun()
     number_of_shots = 0
     bullets = []
+
+    tk.Label(root, text="Welcome to 'Gun' game").pack()
+    tk.Button(root, text="Restart", command=restart_program).pack()
 
 
 def time_handler():
@@ -33,24 +39,32 @@ def time_handler():
     Updates the canvas
     """
     global root, canvas
-    global bullet, target, text_screen, gun, number_of_shots, bullets
+    global bullet, target, target2, text_screen, gun, number_of_shots, bullets
 
     canvas.bind('<Button-1>', gun.load)
     canvas.bind('<ButtonRelease-1>', gun.shoot)
     canvas.bind('<Motion>', gun.targetting)
 
     target.life = 1
-    while target.life or bullets:
+    target2.life = 1
+    while target.life or target2.life or bullets:
+        target.move()
+        target2.move()
         for bullet in bullets:
             bullet.move()
             if bullet.hit_target(target) and target.life:
                 target.life = 0
                 target.hit()
+            if bullet.hit_target(target2) and target2.life:
+                target2.life = 0
+                target2.hit()
+            if target.life == 0 and target2.life == 0:
                 canvas.bind('<Button-1>', '')
                 canvas.bind('<ButtonRelease-1>', '')
                 canvas.itemconfig(text_screen, text='Вы уничтожили цель за ' +
                                                     str(number_of_shots) +
                                                     ' выстрелов')
+
         canvas.update()
         time.sleep(0.03)
         gun.targetting()
@@ -58,6 +72,14 @@ def time_handler():
     canvas.itemconfig(text_screen, text='')
     canvas.delete(gun)
     root.after(1000, time_handler)
+
+
+def restart_program():
+    """Restarts the current program.
+    Note: this function does not return. Any cleanup action (like
+    saving data) must be done before calling this function."""
+    python = sys.executable
+    os.execl(python, python, * sys.argv)
 
 
 class Bullet:
@@ -170,7 +192,7 @@ class Gun:
 class Target:
     global canvas
 
-    def __init__(self):
+    def __init__(self, dx=2, dy=2):
         self.points = 0
         self.life = 1
         self.r = rnd(5, 50)
@@ -180,6 +202,8 @@ class Target:
         self.target_id = canvas.create_oval(self.x - self.r, self.y - self.r,
                                             self.x + self.r, self.y + self.r,
                                             fill=self.color, width=0)
+        self.dx = dx
+        self.dy = dy
 
     def hit(self, points=1):
         """
@@ -188,6 +212,20 @@ class Target:
         canvas.coords(self.target_id, -10, -10, -10, -10)
         self.points += 1
         canvas.itemconfig(text_screen, text='Score: ' + str(self.points))
+
+    def move(self):
+        """
+        Moves the target.
+        """
+        if self.life != 0:
+            self.x += self.dx
+            self.y -= self.dy
+            if self.x + self.r > WIDTH or self.x - self.r <= 0:
+                self.dx = -self.dx
+            if self.y + self.r > HEIGHT or self.y - self.r <= 0:
+                self.dy = -self.dy
+            canvas.coords(self.target_id, self.x - self.r, self.y - self.r,
+                          self.x + self.r, self.y + self.r)
 
 
 if __name__ == __name__:
